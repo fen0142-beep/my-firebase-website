@@ -1,0 +1,8 @@
+{
+  "name": "jing-she-site",
+  "private": true,
+  "scripts": {
+    "start": "sh -c 'P=${PORT:-5173}; exec python3 -m http.server \"$P\" --bind 127.0.0.1 --directory website'",
+    "deploy": "firebase deploy --only hosting"
+  }
+}

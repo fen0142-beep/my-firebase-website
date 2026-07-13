@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>活動管理後台</title>
+    <link rel="icon" type="image/png" href="/ChungTai_logo.png" />
+    <link rel="apple-touch-icon" href="/ChungTai_logo.png" />
+    <style>
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif;
+        background: #f5f5f5;
+        color: #222;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 24px 16px 36px;
+      }
+
+      h1 {
+        margin: 0 0 16px;
+      }
+
+      .card {
+        background: #fff;
+        border-radius: 10px;
+        padding: 16px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+        margin-bottom: 16px;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      label {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 6px;
+      }
+
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
+
+      .full {
+        margin-top: 12px;
+      }
+
+      .actions {
+        margin-top: 14px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        border: none;
+        background: #4f46e5;
+        color: #fff;
+        border-radius: 8px;
+        padding: 9px 14px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      button.secondary {
+        background: #4b5563;
+      }
+
+      button.danger {
+        background: #dc2626;
+      }
+
+      .hint {
+        margin-top: 8px;
+        font-size: 13px;
+        color: #666;
+        line-height: 1.5;
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .admin-list-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .admin-list-table th,
+      .admin-list-table td {
+        text-align: left;
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+        font-size: 14px;
+      }
+
+      .admin-list-table th {
+        background: #fafafa;
+      }
+
+      @media (max-width: 640px) {
+        .admin-list-table thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
+        }
+
+        .admin-list-table tbody tr:not(.admin-list-empty) {
+          display: block;
+          background: #fafafa;
+          border: 1px solid #e8e8e8;
+          border-radius: 12px;
+          padding: 4px 14px 12px;
+          margin-bottom: 14px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .admin-list-table tbody tr:not(.admin-list-empty) td {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 12px;
+          border-bottom: 1px solid #e5e5e5;
+          padding: 11px 0;
+          font-size: 14px;
+        }
+
+        .admin-list-table tbody tr:not(.admin-list-empty) td:last-child {
+          border-bottom: none;
+          padding-top: 14px;
+        }
+
+        .admin-list-table tbody td[data-label]::before {
+          content: attr(data-label);
+          font-weight: 600;
+          color: #555;
+          flex-shrink: 0;
+          min-width: 4.5em;
+          padding-top: 1px;
+        }
+
+        .admin-list-table tbody td[data-label] {
+          text-align: right;
+          word-break: break-word;
+        }
+
+        .admin-list-table tbody td[data-label] > a,
+        .admin-list-table tbody td[data-label] > button {
+          flex-shrink: 0;
+        }
+
+        .admin-list-table tbody tr.admin-list-empty {
+          display: block;
+          background: transparent;
+          border: none;
+          box-shadow: none;
+          padding: 0;
+          margin: 0;
+        }
+
+        .admin-list-table tbody tr.admin-list-empty td {
+          display: block;
+          text-align: center;
+          padding: 20px 12px;
+          color: #666;
+          border: none;
+        }
+
+        .admin-list-table tbody tr.admin-list-empty td::before {
+          content: none;
+        }
+      }
+
+      .message {
+        margin-top: 10px;
+        font-size: 14px;
+      }
+
+      .top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @media (max-width: 720px) {
+        .row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="top-bar">
+        <h1>活動管理後台</h1>
+        <button id="logoutBtn" type="button" class="secondary hidden">登出</button>
+      </div>
+
+      <section id="loginCard" class="card">
+        <form id="loginForm">
+          <div class="row">
+            <div>
+              <label for="loginUsername">帳號</label>
+              <input id="loginUsername" type="text" autocomplete="username" required />
+            </div>
+            <div>
+              <label for="loginPassword">密碼</label>
+              <input id="loginPassword" type="password" autocomplete="current-password" required />
+            </div>
+          </div>
+          <div class="actions">
+            <button type="submit">登入後台</button>
+          </div>
+          <div id="loginMsg" class="message"></div>
+        </form>
+      </section>
+
+      <div id="adminPanel" class="hidden">
+        <section class="card">
+          <form id="eventForm">
+            <div>
+              <label for="name">活動名稱</label>
+              <input id="name" name="name" type="text" required />
+            </div>
+
+            <div class="row full">
+              <div>
+                <label for="publishAt">上架時間</label>
+                <input id="publishAt" name="publishAt" type="datetime-local" required />
+              </div>
+              <div>
+                <label for="unpublishAt">下架時間</label>
+                <input id="unpublishAt" name="unpublishAt" type="datetime-local" required />
+              </div>
+            </div>
+
+            <div class="full">
+              <label for="url">網址</label>
+              <input id="url" name="url" type="text" placeholder="example.com 或 https://example.com" required />
+            </div>
+
+            <div class="actions">
+              <button type="submit">新增活動</button>
+            </div>
+            <div class="hint"><a href="/index.html" target="_blank" rel="noopener noreferrer">前往前台</a></div>
+            <div id="msg" class="message"></div>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="table-scroll">
+            <table class="admin-list-table">
+              <thead>
+                <tr>
+                  <th>活動名稱</th>
+                  <th>上架時間</th>
+                  <th>下架時間</th>
+                  <th>網址</th>
+                  <th>建立時間</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      /** 與試算表綁定的 Apps Script「網頁應用程式」部署網址（結尾 /exec） */
+      const APPS_SCRIPT_EXEC_URL =
+        "https://script.google.com/macros/s/AKfycbw4uuXyBUlJ_-IE3DfsiM9jz7UN-5r4WeEurWHsooOFPb87GgcDRH0wDLjzRv5Ugxfi/exec";
+
+      const loginForm = document.getElementById("loginForm");
+      const loginMsg = document.getElementById("loginMsg");
+      const loginCard = document.getElementById("loginCard");
+      const adminPanel = document.getElementById("adminPanel");
+      const logoutBtn = document.getElementById("logoutBtn");
+      const form = document.getElementById("eventForm");
+      const msg = document.getElementById("msg");
+      const publishAtInput = document.getElementById("publishAt");
+      const unpublishAtInput = document.getElementById("unpublishAt");
+      const tbody = document.getElementById("tbody");
+
+      let adminToken = sessionStorage.getItem("adminToken") || "";
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function apiJsonp(action, payload) {
+        return new Promise(function (resolve, reject) {
+          const callbackName = "__api_cb_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
+          const params = new URLSearchParams(
+            Object.assign(
+              {
+                page: "api",
+                action: action,
+                callback: callbackName,
+              },
+              payload || {},
+            ),
+          );
+          const script = document.createElement("script");
+          const timeoutId = setTimeout(function () {
+            cleanup();
+            reject(new Error("API 逾時"));
+          }, 10000);
+
+          function cleanup() {
+            clearTimeout(timeoutId);
+            delete window[callbackName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+          }
+
+          window[callbackName] = function (res) {
+            cleanup();
+            if (res && res.ok) {
+              resolve(res.data);
+              return;
+            }
+            reject(new Error((res && res.message) || "API 錯誤"));
+          };
+
+          script.onerror = function () {
+            cleanup();
+            reject(new Error("API 載入失敗"));
+          };
+          script.src = APPS_SCRIPT_EXEC_URL + "?" + params.toString();
+          document.body.appendChild(script);
+        });
+      }
+
+      function setMessage(text, isError) {
+        msg.textContent = text;
+        msg.style.color = isError ? "#b91c1c" : "#166534";
+      }
+
+      function setLoginMessage(text, isError) {
+        loginMsg.textContent = text;
+        loginMsg.style.color = isError ? "#b91c1c" : "#166534";
+      }
+
+      function showLogin() {
+        loginCard.classList.remove("hidden");
+        adminPanel.classList.add("hidden");
+        logoutBtn.classList.add("hidden");
+      }
+
+      function showAdmin() {
+        loginCard.classList.add("hidden");
+        adminPanel.classList.remove("hidden");
+        logoutBtn.classList.remove("hidden");
+      }
+
+      function setPublishAtNow() {
+        const now = new Date();
+        const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+        publishAtInput.value = localNow.toISOString().slice(0, 16);
+        const nextDay = new Date(localNow.getTime() + 24 * 60 * 60 * 1000);
+        unpublishAtInput.value = nextDay.toISOString().slice(0, 16);
+      }
+
+      function renderTable(rows) {
+        if (!rows || rows.length === 0) {
+          tbody.innerHTML = '<tr class="admin-list-empty"><td colspan="6">目前沒有資料</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = rows
+          .map(function (row) {
+            return (
+              "<tr>" +
+              '<td data-label="活動名稱">' +
+              escapeHtml(row.name) +
+              "</td>" +
+              '<td data-label="上架時間">' +
+              escapeHtml(row.publishAt) +
+              "</td>" +
+              '<td data-label="下架時間">' +
+              escapeHtml(row.unpublishAt || "") +
+              "</td>" +
+              '<td data-label="網址"><a href="' +
+              escapeHtml(row.url) +
+              '" target="_blank" rel="noopener noreferrer">開啟</a></td>' +
+              '<td data-label="建立時間">' +
+              escapeHtml(row.createdAt) +
+              '</td><td data-label="操作"><button type="button" class="danger delete-btn" data-id="' +
+              escapeHtml(row.id) +
+              '">刪除</button></td>' +
+              "</tr>"
+            );
+          })
+          .join("");
+      }
+
+      function loadTable() {
+        return apiJsonp("adminList", { adminToken: adminToken })
+          .then(renderTable)
+          .catch(function (err) {
+            if (String(err.message).indexOf("尚未登入") >= 0) {
+              adminToken = "";
+              sessionStorage.removeItem("adminToken");
+              showLogin();
+              setLoginMessage("登入已過期，請重新登入", true);
+              return;
+            }
+            setMessage(err.message || "讀取失敗", true);
+          });
+      }
+
+      loginForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        setLoginMessage("登入中...", false);
+        apiJsonp("adminLogin", {
+          username: document.getElementById("loginUsername").value,
+          password: document.getElementById("loginPassword").value,
+        })
+          .then(function (res) {
+            adminToken = res.token;
+            sessionStorage.setItem("adminToken", adminToken);
+            setLoginMessage("登入成功", false);
+            showAdmin();
+            setPublishAtNow();
+            return loadTable();
+          })
+          .catch(function (err) {
+            setLoginMessage(err.message || "登入失敗", true);
+          });
+      });
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        setMessage("儲存中...", false);
+        apiJsonp("adminSave", {
+          adminToken: adminToken,
+          name: document.getElementById("name").value,
+          publishAt: document.getElementById("publishAt").value,
+          unpublishAt: document.getElementById("unpublishAt").value,
+          url: document.getElementById("url").value,
+        })
+          .then(function () {
+            setMessage("新增成功", false);
+            form.reset();
+            setPublishAtNow();
+            return loadTable();
+          })
+          .catch(function (err) {
+            setMessage(err.message || "新增失敗", true);
+          });
+      });
+
+      logoutBtn.addEventListener("click", function () {
+        const token = adminToken;
+        adminToken = "";
+        sessionStorage.removeItem("adminToken");
+        showLogin();
+        setLoginMessage("已登出", false);
+        apiJsonp("adminLogout", { adminToken: token }).catch(function () {});
+      });
+
+      tbody.addEventListener("click", function (e) {
+        const target = e.target;
+        if (!target.classList.contains("delete-btn")) return;
+        const activityId = target.getAttribute("data-id");
+        if (!activityId) return;
+        if (!confirm("確定要刪除這筆活動嗎？")) return;
+
+        setMessage("刪除中...", false);
+        apiJsonp("adminDelete", {
+          adminToken: adminToken,
+          activityId: activityId,
+        })
+          .then(function () {
+            setMessage("刪除成功", false);
+            return loadTable();
+          })
+          .catch(function (err) {
+            setMessage(err.message || "刪除失敗", true);
+          });
+      });
+
+      if (adminToken) {
+        showAdmin();
+        setPublishAtNow();
+        loadTable();
+      } else {
+        showLogin();
+      }
+    </script>
+  </body>
+</html>

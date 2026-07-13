@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>普親精舍</title>
+    <link rel="icon" type="image/png" href="/ChungTai_logo.png" />
+    <link rel="apple-touch-icon" href="/ChungTai_logo.png" />
+    <style>
+      :root {
+        --bg: #edeae6;
+        --text: #1f1f1f;
+        --accent: #6e1f49;
+        --card: #f8f8f8;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        min-height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 1040px;
+        margin: 0 auto;
+        text-align: center;
+        padding: 44px 16px 48px;
+      }
+
+      .logo-mark {
+        width: 96px;
+        height: 136px;
+        margin: 0 auto 4px;
+        display: block;
+        object-fit: contain;
+      }
+
+      .site-title {
+        color: var(--accent);
+        font-size: 38px;
+        margin: 0 0 28px;
+        letter-spacing: 2px;
+      }
+
+      .event-list {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin: 0 auto 34px;
+        text-align: left;
+        align-items: stretch;
+      }
+
+      .event-list > .empty {
+        grid-column: 1 / -1;
+        text-align: center;
+        border-radius: 12px;
+      }
+
+      .event-card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        box-sizing: border-box;
+        background: var(--card);
+        color: var(--text);
+        text-decoration: none;
+        padding: 16px 14px 14px;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        border: 1px solid rgba(110, 31, 73, 0.12);
+        transition: box-shadow 0.2s ease, transform 0.15s ease;
+      }
+
+      .event-card:hover {
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        transform: translateY(-1px);
+      }
+
+      .event-card:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .event-card-title {
+        font-size: 1.05rem;
+        font-weight: 600;
+        line-height: 1.45;
+        margin: 0 0 8px;
+        color: var(--text);
+      }
+
+      .event-card-deadline {
+        font-size: 0.85rem;
+        color: #555;
+        line-height: 1.5;
+        margin: 0 0 12px;
+      }
+
+      .event-card-deadline .event-deadline-label {
+        color: #888;
+        font-weight: 500;
+        margin-right: 4px;
+      }
+
+      .event-card-cta {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--accent);
+        padding-top: 10px;
+        margin-top: auto;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+        text-align: center;
+        letter-spacing: 0.05em;
+      }
+
+      .event-card:hover .event-card-cta {
+        text-decoration: underline;
+      }
+
+      .empty {
+        color: #666;
+        background: var(--card);
+        padding: 18px 12px;
+      }
+
+      .footer-title {
+        margin: 0 0 6px;
+        color: var(--accent);
+        font-size: 30px;
+      }
+
+      .footer-text {
+        margin: 0 auto;
+        font-size: 18px;
+        color: #7a7a7a;
+        line-height: 1.7;
+        display: inline-block;
+        text-align: left;
+      }
+
+      .footer-row {
+        display: flex;
+        align-items: baseline;
+        gap: 2px;
+      }
+
+      .footer-label {
+        width: auto;
+        min-width: 2em;
+      }
+
+      @media (max-width: 900px) {
+        .event-list {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 520px) {
+        .event-list {
+          grid-template-columns: 1fr;
+        }
+
+        .event-card-title {
+          font-size: 1.1rem;
+        }
+
+        .event-card-deadline {
+          font-size: 0.9rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <img
+        class="logo-mark"
+        src="https://drive.google.com/uc?export=view&id=1WJj7YkoN19QdQJ9E8_lq5B1y8kJ-W_Wz"
+        onerror="this.onerror=null;this.src='https://drive.google.com/thumbnail?id=1WJj7YkoN19QdQJ9E8_lq5B1y8kJ-W_Wz&sz=w600';"
+        alt="普親精舍 Logo"
+      />
+      <h1 class="site-title">普親精舍</h1>
+
+      <section id="eventList" class="event-list">
+        <div class="empty">載入中...</div>
+      </section>
+
+      <footer>
+        <h2 class="footer-title">普親精舍</h2>
+        <p class="footer-text">
+          <span class="footer-row"><span class="footer-label">地址</span>｜<span>新竹市東區學府路445號</span></span>
+          <span class="footer-row"><span class="footer-label">電話</span>｜<span>(03)575-0777</span></span>
+        </p>
+      </footer>
+    </main>
+
+    <script>
+      /** 試算表「知道連結的使用者」至少可檢視；首頁分頁 gid 若不同請改此常數 */
+      const SPREADSHEET_ID = "1ASZjjXCY9YNjQY2_HQfJsNb-6-Hf5jbhDpkU_EVmUlM";
+      const SHEET_GID = "0";
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      /** gviz 日期字串 Date(年,月0起,日,時,分,秒) → Date */
+      function parseGvizDate(v) {
+        if (v == null || v === "") return null;
+        if (v instanceof Date && !isNaN(v)) return v;
+        var s = String(v);
+        var m = /^Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)$/.exec(s);
+        if (!m) return null;
+        return new Date(+m[1], +m[2], +m[3], +m[4], +m[5], +m[6]);
+      }
+
+      function cellValue(cell) {
+        if (!cell) return "";
+        if (cell.v != null && cell.v !== "") return cell.v;
+        return cell.f != null ? cell.f : "";
+      }
+
+      function cellDisplay(cell) {
+        if (!cell) return "";
+        if (cell.f != null && cell.f !== "") return cell.f;
+        return cell.v != null ? String(cell.v) : "";
+      }
+
+      /** 與 Apps Script frontList 相同：只顯示目前介於 publishAt～unpublishAt 的列 */
+      function fetchPublishedEventsFromSheet() {
+        return new Promise(function (resolve, reject) {
+          var url =
+            "https://docs.google.com/spreadsheets/d/" +
+            SPREADSHEET_ID +
+            "/gviz/tq?gid=" +
+            encodeURIComponent(SHEET_GID) +
+            "&tqx=out:json";
+          var script = document.createElement("script");
+          var timeoutId = setTimeout(function () {
+            cleanup();
+            reject(new Error("試算表載入逾時"));
+          }, 15000);
+
+          function cleanup() {
+            clearTimeout(timeoutId);
+            if (script.parentNode) script.parentNode.removeChild(script);
+          }
+
+          window.google = window.google || {};
+          window.google.visualization = window.google.visualization || {};
+          window.google.visualization.Query = window.google.visualization.Query || {};
+          window.google.visualization.Query.setResponse = function (res) {
+            cleanup();
+            if (!res || res.status !== "ok" || !res.table) {
+              reject(new Error((res && res.errors && res.errors[0] && res.errors[0].detailed_message) || "試算表讀取失敗"));
+              return;
+            }
+            var cols = res.table.cols || [];
+            var colIndex = {};
+            for (var i = 0; i < cols.length; i++) {
+              if (cols[i].label) colIndex[cols[i].label] = i;
+            }
+            var now = Date.now();
+            var rows = res.table.rows || [];
+            var out = [];
+            for (var r = 0; r < rows.length; r++) {
+              var c = rows[r].c;
+              if (!c) continue;
+              var name = String(cellValue(c[colIndex.name])).trim();
+              var urlStr = String(cellValue(c[colIndex.url])).trim();
+              if (!name || !urlStr) continue;
+              var pAt = parseGvizDate(c[colIndex.publishAt] && c[colIndex.publishAt].v);
+              var uAt = parseGvizDate(c[colIndex.unpublishAt] && c[colIndex.unpublishAt].v);
+              if (!pAt || !uAt || isNaN(pAt) || isNaN(uAt)) continue;
+              if (now < pAt.getTime() || now > uAt.getTime()) continue;
+              out.push({
+                name: name,
+                url: urlStr,
+                deadlineAt: cellDisplay(c[colIndex.unpublishAt]),
+                _sortTime: pAt.getTime(),
+              });
+            }
+            out.sort(function (a, b) {
+              return b._sortTime - a._sortTime;
+            });
+            for (var j = 0; j < out.length; j++) delete out[j]._sortTime;
+            resolve(out);
+          };
+
+          script.onerror = function () {
+            cleanup();
+            reject(new Error("試算表腳本載入失敗"));
+          };
+          script.src = url;
+          document.body.appendChild(script);
+        });
+      }
+
+      function renderEvents(events) {
+        const list = document.getElementById("eventList");
+        if (!events || events.length === 0) {
+          list.innerHTML = '<div class="empty">目前沒有已上架活動</div>';
+          return;
+        }
+
+        list.innerHTML = events
+          .map(function (item) {
+            return (
+              '<a class="event-card" href="' +
+              escapeHtml(item.url) +
+              '" target="_blank" rel="noopener noreferrer">' +
+              '<div class="event-card-title">' +
+              escapeHtml(item.name) +
+              "</div>" +
+              '<div class="event-card-deadline"><span class="event-deadline-label">截止日</span>｜' +
+              escapeHtml(item.deadlineAt) +
+              "</div>" +
+              '<div class="event-card-cta">我要報名</div>' +
+              "</a>"
+            );
+          })
+          .join("");
+      }
+
+      fetchPublishedEventsFromSheet()
+        .then(renderEvents)
+        .catch(function (err) {
+          document.getElementById("eventList").innerHTML =
+            '<div class="empty">載入失敗：' + escapeHtml((err && err.message) || "請稍後再試") + "</div>";
+        });
+    </script>
+  </body>
+</html>
