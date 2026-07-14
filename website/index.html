@@ -227,9 +227,8 @@
 
       /** * 放棄脆弱的 gviz 查詢，直接向你的 Apps Script 請求活動列表 API 
        */
-      function fetchPublishedEventsFromSheet() {
+function fetchPublishedEventsFromSheet() {
         return new Promise(function (resolve, reject) {
-          // 組合後台 API 指令 ?page=api&action=frontList
           var url = APPS_SCRIPT_URL + "?page=api&action=frontList";
 
           fetch(url)
@@ -238,31 +237,53 @@
               return response.json();
             })
             .then(function (res) {
-              if (res && res.status === "success" && Array.isArray(res.data)) {
+              // 【自動格式判定】
+              var list = null;
+              if (Array.isArray(res)) {
+                // 如果回傳直接是陣列
+                list = res;
+              } else if (res && Array.isArray(res.data)) {
+                // 如果包裹在 res.data 裡
+                list = res.data;
+              } else if (res && Array.isArray(res.records)) {
+                // 如果包裹在 res.records 裡
+                list = res.records;
+              }
+
+              if (list) {
                 var now = Date.now();
                 var out = [];
 
-                for (var i = 0; i < res.data.length; i++) {
-                  var item = res.data[i];
-                  if (!item.name || !item.url) continue;
+                for (var i = 0; i < list.length; i++) {
+                  var item = list[i];
+                  if (!item) continue;
+
+                  // 為了相容不同的試算表欄位大小寫，做個轉換
+                  var name = item.name || item.Name || "";
+                  var urlStr = item.url || item.Url || item.URL || "";
+                  var publishAtVal = item.publishAt || item.PublishAt || "";
+                  var unpublishAtVal = item.unpublishAt || item.UnpublishAt || "";
+
+                  if (!name || !urlStr) continue;
 
                   // 轉換時間
-                  var pAt = new Date(item.publishAt);
-                  var uAt = new Date(item.unpublishAt);
+                  var pAt = new Date(publishAtVal);
+                  var uAt = new Date(unpublishAtVal);
 
-                  // 防呆過濾
-                  if (isNaN(pAt) || isNaN(uAt)) continue;
-                  if (now < pAt.getTime() || now > uAt.getTime()) continue;
+                  // 寬鬆防呆：如果沒有設定時間，或時間轉換失敗，依然允許它顯示（或你要改成嚴格比對也行）
+                  if (!isNaN(pAt) && !isNaN(uAt)) {
+                    if (now < pAt.getTime() || now > uAt.getTime()) continue;
+                  }
 
                   out.push({
-                    name: item.name,
-                    url: item.url,
-                    deadlineAt: formatDisplayDate(item.unpublishAt),
-                    _sortTime: pAt.getTime(),
+                    name: name,
+                    url: urlStr,
+                    deadlineAt: formatDisplayDate(unpublishAtVal),
+                    _sortTime: !isNaN(pAt) ? pAt.getTime() : 0,
                   });
                 }
 
-                // 排序：最新上架排最前
+                // 排序
                 out.sort(function (a, b) {
                   return b._sortTime - a._sortTime;
                 });
@@ -270,7 +291,7 @@
 
                 resolve(out);
               } else {
-                reject(new Error((res && res.message) || "解析 API 資料失敗"));
+                reject(new Error("無法識別的 API 資料格式"));
               }
             })
             .catch(function (err) {
@@ -278,7 +299,6 @@
             });
         });
       }
-
       function renderEvents(events) {
         const list = document.getElementById("eventList");
         if (!events || events.length === 0) {
