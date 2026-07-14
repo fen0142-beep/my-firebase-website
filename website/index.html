@@ -199,7 +199,8 @@
     </main>
 
     <script>
-      const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbBl_WUSBO1XQYQrEYcGX1YDJRj9O53gef7tYGDsqUKVUKYYSfoT91jDEJuavczkE1-Qw/exec"; 
+      // 🌟 已帶入你專屬的 GAS API 網址
+      const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBl_WUSBO1XQYQrEYcGX1YDJRj9O53gef7tYGDsqUKVUKYYSfoT91jDEJuavczkE1-Qw/exec"; 
 
       function escapeHtml(str) {
         return String(str)
@@ -210,14 +211,14 @@
           .replace(/'/g, "&#039;");
       }
 
-      // 🌟 強力日期解析器：相容中文「上午/下午」、斜線、橫槓等複雜格式
+      // 🌟 超級日期解析器：不論是「2026/7/14 下午 7:12:00」還是英文格式，都能通通看懂
       function parseDateTime(dateStr) {
         if (!dateStr) return null;
         if (dateStr instanceof Date) return dateStr;
         
         var s = String(dateStr).trim();
         
-        // 處理中文「上午/下午」
+        // 辨識並處理中文「上午 / 下午」
         var isPm = s.indexOf("下午") !== -1;
         var isAm = s.indexOf("上午") !== -1;
         if (isAm || isPm) {
@@ -225,13 +226,14 @@
         }
         
         var d = new Date(s);
-        // 如果瀏覽器仍無法解析，嘗試手動做基本格式轉換
+        
+        // 針對特定舊款瀏覽器做補強解析
         if (isNaN(d.getTime())) {
           s = s.replace(/-/g, "/");
           d = new Date(s);
         }
         
-        // 補正下午時間 (12小時制轉24小時制)
+        // 如果是下午，且小時數小於 12，自動轉換為 24 小時制（例如 下午 7 點 轉為 19 點）
         if (!isNaN(d.getTime()) && isPm) {
           var hrs = d.getHours();
           if (hrs < 12) {
@@ -241,7 +243,7 @@
         return isNaN(d.getTime()) ? null : d;
       }
 
-      // 格式化顯示時間：輸出為 2026/07/14 19:12:00 格式
+      // 格式化顯示時間：把任何時間轉換為「YYYY/MM/DD hh:mm:ss」
       function formatDisplayDate(dateInput) {
         var d = parseDateTime(dateInput);
         if (!d) return String(dateInput || "");
@@ -288,14 +290,14 @@
 
                   if (!name || !urlStr) continue;
 
-                  // 使用新解析器解析上下架時間
+                  // 使用我們的加強版解析器
                   var pAt = parseDateTime(publishAtVal);
                   var uAt = parseDateTime(unpublishAtVal);
 
                   // 檢查上架狀態：現在時間必須介於 pAt 與 uAt 之間
                   if (pAt && uAt) {
                     if (now < pAt.getTime() || now > uAt.getTime()) {
-                      continue; // 不在時間範圍內，不顯示
+                      continue; // 超過時間，過濾不顯示
                     }
                   }
 
