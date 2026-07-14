@@ -315,8 +315,25 @@
 
                   if (!name || !urlStr) continue;
 
-                  var pAt = parseDateTime(publishAtVal);
-                  var uAt = parseDateTime(unpublishAtVal);
+// === 1. 上架時間防呆處理 ===
+var pAt;
+if (!publishAtVal || typeof publishAtVal !== 'string' || publishAtVal.trim() === "" || publishAtVal.length < 5) {
+    // 如果上架時間沒填、不是字串或太短（例如只有 "7/14"），預設成很久以前（代表立刻上架）
+    pAt = new Date("2000-01-01"); 
+} else {
+    pAt = parseDateTime(publishAtVal);
+    if (!pAt) pAt = new Date("2000-01-01"); // 如果解析失敗，同樣給予預設值
+}
+
+// === 2. 下架時間防呆處理 ===
+var uAt;
+if (!unpublishAtVal || typeof unpublishAtVal !== 'string' || unpublishAtVal.trim() === "") {
+    // 如果下架時間沒填（空字串），預設成很久以後（代表永不下架）
+    uAt = new Date("2099-12-31"); 
+} else {
+    uAt = parseDateTime(unpublishAtVal);
+    if (!uAt) uAt = new Date("2099-12-31"); // 如果解析失敗，同樣給予預設值
+}
 
                   // 只有當現在時間介於上架與下架時間之間，才會顯示
                   if (pAt && uAt) {
