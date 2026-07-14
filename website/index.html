@@ -317,14 +317,14 @@ function fetchPublishedEventsFromSheet() {
               "</div>" +
               '<div class="event-card-deadline"><span class="event-deadline-label">截止日</span>｜' +
               escapeHtml(item.unpublishAt || "") +
-              "</div>"
+              '</div>' +
               '<div class="event-card-cta">我要報名</div>' +
               "</a>"
             );
           })
           .join("");
       }
-
+      
       fetchPublishedEventsFromSheet()
         .then(renderEvents)
         .catch(function (err) {
