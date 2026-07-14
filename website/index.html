@@ -199,9 +199,8 @@
     </main>
 
     <script>
-      /** 試算表「知道連結的使用者」至少可檢視；首頁分頁 gid 若不同請改此常數 */
-      const SPREADSHEET_ID = "1WWmU-gRZ4cj_l2_Lcb5wT7QongcQFvijzFMODk9kSpQ";                               
-      const SHEET_GID = "1349277131";
+      // ⚠️ 貼上你「後台登入/新增活動」在用的 Apps Script 網址（結尾必須是 /exec）
+      const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBl_WUSBO1XQYQrEYcGX1YDJRj9O53gef7tYGDsqUKVUKYYSfoT91jDEJuavczkE1-Qw/exec"; 
 
       function escapeHtml(str) {
         return String(str)
@@ -212,95 +211,71 @@
           .replace(/'/g, "&#039;");
       }
 
-      /** gviz 日期字串 Date(年,月0起,日,時,分,秒) → Date */
-      function parseGvizDate(v) {
-        if (v == null || v === "") return null;
-        if (v instanceof Date && !isNaN(v)) return v;
-        var s = String(v);
-        var m = /^Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)$/.exec(s);
-        if (!m) return null;
-        return new Date(+m[1], +m[2], +m[3], +m[4], +m[5], +m[6]);
+      // 格式化顯示時間：把 ISO 字串或物件轉成一般中文易讀格式 (例如 2026/07/14 19:12:00)
+      function formatDisplayDate(dateInput) {
+        if (!dateInput) return "";
+        var d = new Date(dateInput);
+        if (isNaN(d)) return String(dateInput);
+        var pad = function(n) { return n < 10 ? '0' + n : n; };
+        return d.getFullYear() + '/' +
+               pad(d.getMonth() + 1) + '/' +
+               pad(d.getDate()) + ' ' +
+               pad(d.getHours()) + ':' +
+               pad(d.getMinutes()) + ':' +
+               pad(d.getSeconds());
       }
 
-      function cellValue(cell) {
-        if (!cell) return "";
-        if (cell.v != null && cell.v !== "") return cell.v;
-        return cell.f != null ? cell.f : "";
-      }
-
-      function cellDisplay(cell) {
-        if (!cell) return "";
-        if (cell.f != null && cell.f !== "") return cell.f;
-        return cell.v != null ? String(cell.v) : "";
-      }
-
-      /** 與 Apps Script frontList 相同：只顯示目前介於 publishAt～unpublishAt 的列 */
+      /** * 放棄脆弱的 gviz 查詢，直接向你的 Apps Script 請求活動列表 API 
+       */
       function fetchPublishedEventsFromSheet() {
         return new Promise(function (resolve, reject) {
-          var url =
-            "https://docs.google.com/spreadsheets/d/" +
-            SPREADSHEET_ID +
-            "/gviz/tq?gid=" +
-            encodeURIComponent(SHEET_GID) +
-            "&tqx=out:json";
-          var script = document.createElement("script");
-          var timeoutId = setTimeout(function () {
-            cleanup();
-            reject(new Error("試算表載入逾時"));
-          }, 15000);
+          // 組合後台 API 指令 ?page=api&action=frontList
+          var url = APPS_SCRIPT_URL + "?page=api&action=frontList";
 
-          function cleanup() {
-            clearTimeout(timeoutId);
-            if (script.parentNode) script.parentNode.removeChild(script);
-          }
+          fetch(url)
+            .then(function (response) {
+              if (!response.ok) throw new Error("網路連線失敗");
+              return response.json();
+            })
+            .then(function (res) {
+              if (res && res.status === "success" && Array.isArray(res.data)) {
+                var now = Date.now();
+                var out = [];
 
-          window.google = window.google || {};
-          window.google.visualization = window.google.visualization || {};
-          window.google.visualization.Query = window.google.visualization.Query || {};
-          window.google.visualization.Query.setResponse = function (res) {
-            cleanup();
-            if (!res || res.status !== "ok" || !res.table) {
-              reject(new Error((res && res.errors && res.errors[0] && res.errors[0].detailed_message) || "試算表讀取失敗"));
-              return;
-            }
-            var cols = res.table.cols || [];
-            var colIndex = {};
-            for (var i = 0; i < cols.length; i++) {
-              if (cols[i].label) colIndex[cols[i].label] = i;
-            }
-            var now = Date.now();
-            var rows = res.table.rows || [];
-            var out = [];
-            for (var r = 0; r < rows.length; r++) {
-              var c = rows[r].c;
-              if (!c) continue;
-              var name = String(cellValue(c[colIndex.name])).trim();
-              var urlStr = String(cellValue(c[colIndex.url])).trim();
-              if (!name || !urlStr) continue;
-              var pAt = parseGvizDate(c[colIndex.publishAt] && c[colIndex.publishAt].v);
-              var uAt = parseGvizDate(c[colIndex.unpublishAt] && c[colIndex.unpublishAt].v);
-              if (!pAt || !uAt || isNaN(pAt) || isNaN(uAt)) continue;
-              if (now < pAt.getTime() || now > uAt.getTime()) continue;
-              out.push({
-                name: name,
-                url: urlStr,
-                deadlineAt: cellDisplay(c[colIndex.unpublishAt]),
-                _sortTime: pAt.getTime(),
-              });
-            }
-            out.sort(function (a, b) {
-              return b._sortTime - a._sortTime;
+                for (var i = 0; i < res.data.length; i++) {
+                  var item = res.data[i];
+                  if (!item.name || !item.url) continue;
+
+                  // 轉換時間
+                  var pAt = new Date(item.publishAt);
+                  var uAt = new Date(item.unpublishAt);
+
+                  // 防呆過濾
+                  if (isNaN(pAt) || isNaN(uAt)) continue;
+                  if (now < pAt.getTime() || now > uAt.getTime()) continue;
+
+                  out.push({
+                    name: item.name,
+                    url: item.url,
+                    deadlineAt: formatDisplayDate(item.unpublishAt),
+                    _sortTime: pAt.getTime(),
+                  });
+                }
+
+                // 排序：最新上架排最前
+                out.sort(function (a, b) {
+                  return b._sortTime - a._sortTime;
+                });
+                for (var j = 0; j < out.length; j++) delete out[j]._sortTime;
+
+                resolve(out);
+              } else {
+                reject(new Error((res && res.message) || "解析 API 資料失敗"));
+              }
+            })
+            .catch(function (err) {
+              reject(err);
             });
-            for (var j = 0; j < out.length; j++) delete out[j]._sortTime;
-            resolve(out);
-          };
-
-          script.onerror = function () {
-            cleanup();
-            reject(new Error("試算表腳本載入失敗"));
-          };
-          script.src = url;
-          document.body.appendChild(script);
         });
       }
 
