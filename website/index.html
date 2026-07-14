@@ -374,14 +374,17 @@ if (!unpublishAtVal || typeof unpublishAtVal !== 'string' || unpublishAtVal.trim
           return;
         }
 
-        // 使用 ES6 Template Literals 樣板字串，徹底免除單雙引號拼接可能導致的語法錯誤
+// 使用 ES6 Template Literals 樣板字串，徹底免除單雙引號拼接可能導致的語法錯誤
         list.innerHTML = events
           .map(function (item) {
+            // 先取得該活動原本的時間字串（如果不存在就給空字串）
+            var displayDeadline = item.unpublishAt ? item.unpublishAt : "";
+
             return `
               <a class="event-card" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">
                 <div class="event-card-title">${escapeHtml(item.name)}</div>
                 <div class="event-card-deadline">
-                  <span class="event-deadline-label">截止日</span>｜${escapeHtml(item.unpublishAt || "")}
+                  <span class="event-deadline-label">截止日</span>｜${escapeHtml(displayDeadline)}
                 </div>
                 <div class="event-card-cta">我要報名</div>
               </a>
