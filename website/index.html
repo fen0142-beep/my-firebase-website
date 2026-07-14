@@ -275,12 +275,12 @@ function fetchPublishedEventsFromSheet() {
                     if (now < pAt.getTime() || now > uAt.getTime()) continue;
                   }
 
-                  out.push({
-                    name: name,
-                    url: urlStr,
-                    deadlineAt: formatDisplayDate(unpublishAtVal),
-                    _sortTime: !isNaN(pAt) ? pAt.getTime() : 0,
-                  });
+                 out.push({
+                 name: name,
+                 url: urlStr,
+                 unpublishAt: formatDisplayDate(unpublishAtVal), // 改成 unpublishAt
+                 _sortTime: !isNaN(pAt) ? pAt.getTime() : 0,
+                 });
                 }
 
                 // 排序
@@ -316,8 +316,8 @@ function fetchPublishedEventsFromSheet() {
               escapeHtml(item.name) +
               "</div>" +
               '<div class="event-card-deadline"><span class="event-deadline-label">截止日</span>｜' +
-              escapeHtml(item.deadlineAt) +
-              "</div>" +
+              escapeHtml(item.unpublishAt || "") +
+              "</div>"
               '<div class="event-card-cta">我要報名</div>' +
               "</a>"
             );
