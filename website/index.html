@@ -199,7 +199,6 @@
     </main>
 
     <script>
-      // 🌟 已帶入你專屬的 GAS API 網址
       const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBl_WUSBO1XQYQrEYcGX1YDJRj9O53gef7tYGDsqUKVUKYYSfoT91jDEJuavczkE1-Qw/exec"; 
 
       function escapeHtml(str) {
@@ -211,39 +210,65 @@
           .replace(/'/g, "&#039;");
       }
 
-      // 🌟 超級日期解析器：不論是「2026/7/14 下午 7:12:00」還是英文格式，都能通通看懂
+      // 🌟 超級無敵防呆日期解析器：手動拆解年月日，不論瀏覽器語系是什麼，都不會再解析錯誤！
       function parseDateTime(dateStr) {
         if (!dateStr) return null;
         if (dateStr instanceof Date) return dateStr;
-        
+
         var s = String(dateStr).trim();
-        
-        // 辨識並處理中文「上午 / 下午」
+
+        // 偵測並處理中文「上午/下午」
         var isPm = s.indexOf("下午") !== -1;
         var isAm = s.indexOf("上午") !== -1;
-        if (isAm || isPm) {
-          s = s.replace("上午", "").replace("下午", "").trim();
+        s = s.replace("上午", "").replace("下午", "").trim();
+
+        // 將日期與時間分離
+        var parts = s.split(/\s+/);
+        if (parts.length === 0) return null;
+
+        var datePart = parts[0];
+        var timePart = parts[1] || "00:00:00";
+
+        // 拆解年月日
+        var dateSep = datePart.indexOf("-") !== -1 ? "-" : "/";
+        var dParts = datePart.split(dateSep);
+        if (dParts.length !== 3) return null;
+
+        var year, month, day;
+        if (dParts[0].length === 4) {
+          // 格式：YYYY/MM/DD
+          year = parseInt(dParts[0], 10);
+          month = parseInt(dParts[1], 10) - 1;
+          day = parseInt(dParts[2], 10);
+        } else if (dParts[2].length === 4) {
+          // 格式：MM/DD/YYYY 或 DD/MM/YYYY。試算表標準輸出皆為 MM/DD/YYYY
+          month = parseInt(dParts[0], 10) - 1;
+          day = parseInt(dParts[1], 10);
+          year = parseInt(dParts[2], 10);
+        } else {
+          // 備用方案
+          var d = new Date(dateStr);
+          return isNaN(d.getTime()) ? null : d;
         }
-        
-        var d = new Date(s);
-        
-        // 針對特定舊款瀏覽器做補強解析
-        if (isNaN(d.getTime())) {
-          s = s.replace(/-/g, "/");
-          d = new Date(s);
+
+        // 拆解時分秒
+        var tParts = timePart.split(":");
+        var hours = parseInt(tParts[0] || 0, 10);
+        var minutes = parseInt(tParts[1] || 0, 10);
+        var seconds = parseInt(tParts[2] || 0, 10);
+
+        // 根據上午/下午補正小時數
+        if (isPm && hours < 12) {
+          hours += 12;
+        } else if (isAm && hours === 12) {
+          hours = 0;
         }
-        
-        // 如果是下午，且小時數小於 12，自動轉換為 24 小時制（例如 下午 7 點 轉為 19 點）
-        if (!isNaN(d.getTime()) && isPm) {
-          var hrs = d.getHours();
-          if (hrs < 12) {
-            d.setHours(hrs + 12);
-          }
-        }
-        return isNaN(d.getTime()) ? null : d;
+
+        var finalDate = new Date(year, month, day, hours, minutes, seconds);
+        return isNaN(finalDate.getTime()) ? null : finalDate;
       }
 
-      // 格式化顯示時間：把任何時間轉換為「YYYY/MM/DD hh:mm:ss」
+      // 統一輸出格式為：YYYY/MM/DD HH:mm:ss
       function formatDisplayDate(dateInput) {
         var d = parseDateTime(dateInput);
         if (!d) return String(dateInput || "");
@@ -290,14 +315,13 @@
 
                   if (!name || !urlStr) continue;
 
-                  // 使用我們的加強版解析器
                   var pAt = parseDateTime(publishAtVal);
                   var uAt = parseDateTime(unpublishAtVal);
 
-                  // 檢查上架狀態：現在時間必須介於 pAt 與 uAt 之間
+                  // 只有當現在時間介於上架與下架時間之間，才會顯示
                   if (pAt && uAt) {
                     if (now < pAt.getTime() || now > uAt.getTime()) {
-                      continue; // 超過時間，過濾不顯示
+                      continue; 
                     }
                   }
 
@@ -309,7 +333,7 @@
                   });
                 }
 
-                // 排序
+                // 排序：最新上架排最前面
                 out.sort(function (a, b) {
                   return b._sortTime - a._sortTime;
                 });
@@ -333,17 +357,18 @@
           return;
         }
 
+        // 使用 ES6 Template Literals 樣板字串，徹底免除單雙引號拼接可能導致的語法錯誤
         list.innerHTML = events
           .map(function (item) {
-            return (
-              '<a class="event-card" href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener noreferrer">' +
-                '<div class="event-card-title">' + escapeHtml(item.name) + '</div>' +
-                '<div class="event-card-deadline">' +
-                  '<span class="event-deadline-label">截止日</span>｜' + escapeHtml(item.unpublishAt || "") +
-                '</div>' +
-                '<div class="event-card-cta">我要報名</div>' +
-              '</a>'
-            );
+            return `
+              <a class="event-card" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">
+                <div class="event-card-title">${escapeHtml(item.name)}</div>
+                <div class="event-card-deadline">
+                  <span class="event-deadline-label">截止日</span>｜${escapeHtml(item.unpublishAt || "")}
+                </div>
+                <div class="event-card-cta">我要報名</div>
+              </a>
+            `;
           })
           .join("");
       }
@@ -352,7 +377,7 @@
         .then(renderEvents)
         .catch(function (err) {
           document.getElementById("eventList").innerHTML =
-            '<div class="empty">載入失敗：' + escapeHtml((err && err.message) || "請稍後再試") + "</div>";
+            `<div class="empty">載入失敗：${escapeHtml((err && err.message) || "請稍後再試")}</div>`;
         });
     </script>
   </body>
