@@ -199,9 +199,7 @@
     </main>
 
     <script>
-      /** 試算表「知道連結的使用者」至少可檢視；首頁分頁 gid 若不同請改此常數 */
-      const SPREADSHEET_ID = "1WWmU-gRZ4cj_l2_Lcb5wT7QongcQFvijzFMODk9kSpQ";
-      const SHEET_GID = "1349277131";
+      const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBl_WUSBO1XQYQrEYcGX1YDJRj9O53gef7tYGDsqUKVUKYYSfoT91jDEJuavczkE1-Qw/exec"; 
 
       function escapeHtml(str) {
         return String(str)
@@ -212,139 +210,160 @@
           .replace(/'/g, "&#039;");
       }
 
-      /** gviz 日期字串 Date(年,月0起,日,時,分,秒) → Date */
-      function parseGvizDate(v) {
-        if (v == null || v === "") return null;
-        if (v instanceof Date && !isNaN(v)) return v;
-        var s = String(v);
-        var m = /^Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)$/.exec(s);
-        if (!m) return null;
-        // 注意：gviz 傳回的月份是 0 起算 (1月是 0)
-        return new Date(+m[1], +m[2], +m[3], +m[4], +m[5], +m[6]);
-      }
+      // 🌟 超級無敵防呆日期解析器：手動拆解年月日，不論瀏覽器語系是什麼，都不會再解析錯誤！
+      function parseDateTime(dateStr) {
+        if (!dateStr) return null;
+        if (dateStr instanceof Date) return dateStr;
 
-      // 將 Date 物件格式化為 yyyy/MM/dd HH:mm 格式的字串
-      function formatDateTime(date) {
-        if (!date || isNaN(date.getTime())) return "";
-        var yyyy = date.getFullYear();
-        var mm = String(date.getMonth() + 1).padStart(2, '0');
-        var dd = String(date.getDate()).padStart(2, '0');
-        var hh = String(date.getHours()).padStart(2, '0');
-        var min = String(date.getMinutes()).padStart(2, '0');
-        return yyyy + "/" + mm + "/" + dd + " " + hh + ":" + min;
-      }
+        var s = String(dateStr).trim();
 
-      function cellValue(cell) {
-        if (!cell) return "";
-        if (cell.v != null && cell.v !== "") return cell.v;
-        return cell.f != null ? cell.f : "";
-      }
+        // 偵測並處理中文「上午/下午」
+        var isPm = s.indexOf("下午") !== -1;
+        var isAm = s.indexOf("上午") !== -1;
+        s = s.replace("上午", "").replace("下午", "").trim();
 
-      /** 核心修改：取得欄位索引，同時相容中英文標題 */
-      function findColumnIndex(colIndexMap, colNamesArray) {
-        for (var i = 0; i < colNamesArray.length; i++) {
-          var name = colNamesArray[i];
-          if (colIndexMap[name] !== undefined) {
-            return colIndexMap[name];
-          }
+        // 將日期與時間分離
+        var parts = s.split(/\s+/);
+        if (parts.length === 0) return null;
+
+        var datePart = parts[0];
+        var timePart = parts[1] || "00:00:00";
+
+        // 拆解年月日
+        var dateSep = datePart.indexOf("-") !== -1 ? "-" : "/";
+        var dParts = datePart.split(dateSep);
+        if (dParts.length !== 3) return null;
+
+        var year, month, day;
+        if (dParts[0].length === 4) {
+          // 格式：YYYY/MM/DD
+          year = parseInt(dParts[0], 10);
+          month = parseInt(dParts[1], 10) - 1;
+          day = parseInt(dParts[2], 10);
+        } else if (dParts[2].length === 4) {
+          // 格式：MM/DD/YYYY 或 DD/MM/YYYY。試算表標準輸出皆為 MM/DD/YYYY
+          month = parseInt(dParts[0], 10) - 1;
+          day = parseInt(dParts[1], 10);
+          year = parseInt(dParts[2], 10);
+        } else {
+          // 備用方案
+          var d = new Date(dateStr);
+          return isNaN(d.getTime()) ? null : d;
         }
-        return -1;
+
+        // 拆解時分秒
+        var tParts = timePart.split(":");
+        var hours = parseInt(tParts[0] || 0, 10);
+        var minutes = parseInt(tParts[1] || 0, 10);
+        var seconds = parseInt(tParts[2] || 0, 10);
+
+        // 根據上午/下午補正小時數
+        if (isPm && hours < 12) {
+          hours += 12;
+        } else if (isAm && hours === 12) {
+          hours = 0;
+        }
+
+        var finalDate = new Date(year, month, day, hours, minutes, seconds);
+        return isNaN(finalDate.getTime()) ? null : finalDate;
       }
 
-      /** 與 Apps Script frontList 相同：只顯示目前介於 publishAt～unpublishAt 的列 */
+      // 統一輸出格式為：YYYY/MM/DD HH:mm:ss
+      function formatDisplayDate(dateInput) {
+        var d = parseDateTime(dateInput);
+        if (!d) return String(dateInput || "");
+        var pad = function(n) { return n < 10 ? '0' + n : n; };
+        return d.getFullYear() + '/' +
+               pad(d.getMonth() + 1) + '/' +
+               pad(d.getDate()) + ' ' +
+               pad(d.getHours()) + ':' +
+               pad(d.getMinutes()) + ':' +
+               pad(d.getSeconds());
+      }
+
       function fetchPublishedEventsFromSheet() {
         return new Promise(function (resolve, reject) {
-          var url =
-            "https://docs.google.com/spreadsheets/d/" +
-            SPREADSHEET_ID +
-            "/gviz/tq?gid=" +
-            encodeURIComponent(SHEET_GID) +
-            "&tqx=out:json";
+          var url = APPS_SCRIPT_URL + "?page=api&action=frontList";
 
-          var script = document.createElement("script");
-          var timeoutId = setTimeout(function () {
-            cleanup();
-            reject(new Error("試算表載入逾時"));
-          }, 15000);
-
-          function cleanup() {
-            clearTimeout(timeoutId);
-            if (script.parentNode) script.parentNode.removeChild(script);
-          }
-
-          window.google = window.google || {};
-          window.google.visualization = window.google.visualization || {};
-          window.google.visualization.Query = window.google.visualization.Query || {};
-          window.google.visualization.Query.setResponse = function (res) {
-            cleanup();
-            if (!res || res.status !== "ok" || !res.table) {
-              reject(new Error((res && res.errors && res.errors[0] && res.errors[0].detailed_message) || "試算表讀取失敗"));
-              return;
-            }
-            var cols = res.table.cols || [];
-            var colIndex = {};
-            for (var i = 0; i < cols.length; i++) {
-              if (cols[i].label) {
-                // 將所有欄位名稱轉為小寫並去除空白，方便做比對
-                colIndex[cols[i].label.trim().toLowerCase()] = i;
+          fetch(url)
+            .then(function (response) {
+              if (!response.ok) throw new Error("網路連線失敗");
+              return response.json();
+            })
+            .then(function (res) {
+              var list = null;
+              if (Array.isArray(res)) {
+                list = res;
+              } else if (res && Array.isArray(res.data)) {
+                list = res.data;
+              } else if (res && Array.isArray(res.records)) {
+                list = res.records;
               }
-            }
 
-            // 支援中英文等多種可能的欄位標題名稱
-            var nameIdx = findColumnIndex(colIndex, ["name", "title"]);
-            var urlIdx = findColumnIndex(colIndex,  ["url", "link", "報名連結"]);
-            var pAtIdx = findColumnIndex(colIndex,  ["publishat", "publish_at", "上架日期"]);
-            var uAtIdx = findColumnIndex(colIndex,  ["unpublishat", "unpublish_at", "截止時間", "下架日期"]);
+              if (list) {
+                var now = Date.now();
+                var out = [];
 
-            // 檢查必要欄位是否存在
-            if (nameIdx === -1 || urlIdx === -1) {
-              reject(new Error("找不到對應的試算表欄位標題，請確認試算表首列包含：活動名稱、報名網址、上架時間、下架時間"));
-              return;
-            }
+                for (var i = 0; i < list.length; i++) {
+                  var item = list[i];
+                  if (!item) continue;
 
-            var now = Date.now();
-            var rows = res.table.rows || [];
-            var out = [];
+                  var name = item.name || item.Name || "";
+                  var urlStr = item.url || item.Url || item.URL || "";
+                  var publishAtVal = item.publishAt || item.PublishAt || "";
+                  var unpublishAtVal = item.unpublishAt || item.unpublishAt || "";
 
-            for (var r = 0; r < rows.length; r++) {
-              var c = rows[r].c;
-              if (!c) continue;
+                  if (!name || !urlStr) continue;
 
-              var name = String(cellValue(c[nameIdx])).trim();
-              var urlStr = String(cellValue(c[urlIdx])).trim();
-              if (!name || !urlStr) continue;
+// === 1. 上架時間防呆處理 ===
+var pAt;
+if (!publishAtVal || typeof publishAtVal !== 'string' || publishAtVal.trim() === "" || publishAtVal.length < 5) {
+    // 如果上架時間沒填、不是字串或太短（例如只有 "7/14"），預設成很久以前（代表立刻上架）
+    pAt = new Date("2000-01-01"); 
+} else {
+    pAt = parseDateTime(publishAtVal);
+    if (!pAt) pAt = new Date("2000-01-01"); // 如果解析失敗，同樣給予預設值
+}
 
-              var pAt = parseGvizDate(c[pAtIdx] && c[pAtIdx].v);
-              var uAt = parseGvizDate(c[uAtIdx] && c[uAtIdx].v);
+// === 2. 下架時間防呆處理 ===
+var uAt;
+if (!unpublishAtVal || typeof unpublishAtVal !== 'string' || unpublishAtVal.trim() === "" || unpublishAtVal.length < 5) {
+    // 如果下架時間沒填（空字串），預設成很久以後（代表永不下架）
+    uAt = new Date("2099-12-31"); 
+} else {
+    uAt = parseDateTime(unpublishAtVal);
+    if (!uAt) uAt = new Date("2099-12-31"); // 如果解析失敗，同樣給予預設值
+}
 
-              if (!pAt || !uAt || isNaN(pAt.getTime()) || isNaN(uAt.getTime())) continue;
+                  // 只有當現在時間介於上架與下架時間之間，才會顯示
+                  if (pAt && uAt) {
+                    if (now < pAt.getTime() || now > uAt.getTime()) {
+                      continue; 
+                    }
+                  }
 
-              // 檢查當前時間是否在上架與下架區間之內
-              if (now < pAt.getTime() || now > uAt.getTime()) continue;
+                  out.push({
+                    name: name,
+                    url: urlStr,
+                    unpublishAt: formatDisplayDate(unpublishAtVal),
+                    _sortTime: pAt ? pAt.getTime() : 0,
+                  });
+                }
 
-              out.push({
-                name: name,
-                url: urlStr,
-                // 🌟 格式化為包含年月日時分的完整時間
-                deadlineAt: formatDateTime(uAt),
-                _sortTime: pAt.getTime(),
-              });
-            }
+                // 排序：最新上架排最前面
+                out.sort(function (a, b) {
+                  return b._sortTime - a._sortTime;
+                });
+                for (var j = 0; j < out.length; j++) delete out[j]._sortTime;
 
-            // 依照上架時間由新到舊排序
-            out.sort(function (a, b) {
-              return b._sortTime - a._sortTime;
+                resolve(out);
+              } else {
+                reject(new Error("無法識別的 API 資料格式"));
+              }
+            })
+            .catch(function (err) {
+              reject(err);
             });
-            for (var j = 0; j < out.length; j++) delete out[j]._sortTime;
-            resolve(out);
-          };
-
-          script.onerror = function () {
-            cleanup();
-            reject(new Error("試算表腳本載入失敗"));
-          };
-          script.src = url;
-          document.body.appendChild(script);
         });
       }
 
@@ -355,21 +374,21 @@
           return;
         }
 
+// 使用 ES6 Template Literals 樣板字串，徹底免除單雙引號拼接可能導致的語法錯誤
         list.innerHTML = events
           .map(function (item) {
-            return (
-              '<a class="event-card" href="' +
-              escapeHtml(item.url) +
-              '" target="_blank" rel="noopener noreferrer">' +
-              '<div class="event-card-title">' +
-              escapeHtml(item.name) +
-              "</div>" +
-              '<div class="event-card-deadline"><span class="event-deadline-label">截止日</span>｜' +
-              escapeHtml(item.deadlineAt) +
-              "</div>" +
-              '<div class="event-card-cta">我要報名</div>' +
-              "</a>"
-            );
+            // 先取得該活動原本的時間字串（如果不存在就給空字串）
+            var displayDeadline = item.unpublishAtVal ? item.unpublishAtVal : "";
+
+            return `
+              <a class="event-card" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">
+                <div class="event-card-title">${escapeHtml(item.name)}</div>
+                <div class="event-card-deadline">
+                  <span class="event-deadline-label">截止日</span>｜${escapeHtml(displayDeadline)}
+                </div>
+                <div class="event-card-cta">我要報名</div>
+              </a>
+            `;
           })
           .join("");
       }
@@ -378,7 +397,7 @@
         .then(renderEvents)
         .catch(function (err) {
           document.getElementById("eventList").innerHTML =
-            '<div class="empty">載入失敗：' + escapeHtml((err && err.message) || "請稍後再試") + "</div>";
+            `<div class="empty">載入失敗：${escapeHtml((err && err.message) || "請稍後再試")}</div>`;
         });
     </script>
   </body>
