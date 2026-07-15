@@ -378,7 +378,7 @@ if (!unpublishAtVal || typeof unpublishAtVal !== 'string' || unpublishAtVal.trim
         list.innerHTML = events
           .map(function (item) {
             // 先取得該活動原本的時間字串（如果不存在就給空字串）
-            var displayDeadline = item.unpublishAtVal ? item.unpublishAtVal : "";
+            var displayDeadline = item.unpublishAt ? item.unpublishAt : "";
 
             return `
               <a class="event-card" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">
