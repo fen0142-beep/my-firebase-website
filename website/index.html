@@ -327,7 +327,7 @@ if (!publishAtVal || typeof publishAtVal !== 'string' || publishAtVal.trim() ===
 
 // === 2. 下架時間防呆處理 ===
 var uAt;
-if (!unpublishAtVal || typeof unpublishAtVal !== 'string' || unpublishAtVal.trim() === "") {
+if (!unpublishAtVal || typeof unpublishAtVal !== 'string' || unpublishAtVal.trim() === "" || unpublishAtVal.length < 5) {
     // 如果下架時間沒填（空字串），預設成很久以後（代表永不下架）
     uAt = new Date("2099-12-31"); 
 } else {
