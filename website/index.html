@@ -219,7 +219,19 @@
         var s = String(v);
         var m = /^Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)$/.exec(s);
         if (!m) return null;
+        // 注意：gviz 傳回的月份是 0 起算 (1月是 0)
         return new Date(+m[1], +m[2], +m[3], +m[4], +m[5], +m[6]);
+      }
+
+      // 將 Date 物件格式化為 yyyy/MM/dd HH:mm 格式的字串
+      function formatDateTime(date) {
+        if (!date || isNaN(date.getTime())) return "";
+        var yyyy = date.getFullYear();
+        var mm = String(date.getMonth() + 1).padStart(2, '0');
+        var dd = String(date.getDate()).padStart(2, '0');
+        var hh = String(date.getHours()).padStart(2, '0');
+        var min = String(date.getMinutes()).padStart(2, '0');
+        return yyyy + "/" + mm + "/" + dd + " " + hh + ":" + min;
       }
 
       function cellValue(cell) {
@@ -228,10 +240,15 @@
         return cell.f != null ? cell.f : "";
       }
 
-      function cellDisplay(cell) {
-        if (!cell) return "";
-        if (cell.f != null && cell.f !== "") return cell.f;
-        return cell.v != null ? String(cell.v) : "";
+      /** 核心修改：取得欄位索引，同時相容中英文標題 */
+      function findColumnIndex(colIndexMap, colNamesArray) {
+        for (var i = 0; i < colNamesArray.length; i++) {
+          var name = colNamesArray[i];
+          if (colIndexMap[name] !== undefined) {
+            return colIndexMap[name];
+          }
+        }
+        return -1;
       }
 
       /** 與 Apps Script frontList 相同：只顯示目前介於 publishAt～unpublishAt 的列 */
@@ -243,6 +260,7 @@
             "/gviz/tq?gid=" +
             encodeURIComponent(SHEET_GID) +
             "&tqx=out:json";
+
           var script = document.createElement("script");
           var timeoutId = setTimeout(function () {
             cleanup();
@@ -266,28 +284,54 @@
             var cols = res.table.cols || [];
             var colIndex = {};
             for (var i = 0; i < cols.length; i++) {
-              if (cols[i].label) colIndex[cols[i].label] = i;
+              if (cols[i].label) {
+                // 將所有欄位名稱轉為小寫並去除空白，方便做比對
+                colIndex[cols[i].label.trim().toLowerCase()] = i;
+              }
             }
+
+            // 支援中英文等多種可能的欄位標題名稱
+            var nameIdx = findColumnIndex(colIndex, ["活動名稱", "name", "title"]);
+            var urlIdx = findColumnIndex(colIndex, ["報名網址", "url", "link", "報名連結"]);
+            var pAtIdx = findColumnIndex(colIndex, ["上架時間", "publishat", "publish_at", "上架日期"]);
+            var uAtIdx = findColumnIndex(colIndex, ["下架時間", "unpublishat", "unpublish_at", "截止時間", "下架日期"]);
+
+            // 檢查必要欄位是否存在
+            if (nameIdx === -1 || urlIdx === -1) {
+              reject(new Error("找不到對應的試算表欄位標題，請確認試算表首列包含：活動名稱、報名網址、上架時間、下架時間"));
+              return;
+            }
+
             var now = Date.now();
             var rows = res.table.rows || [];
             var out = [];
+
             for (var r = 0; r < rows.length; r++) {
               var c = rows[r].c;
               if (!c) continue;
-              var name = String(cellValue(c[colIndex.name])).trim();
-              var urlStr = String(cellValue(c[colIndex.url])).trim();
+
+              var name = String(cellValue(c[nameIdx])).trim();
+              var urlStr = String(cellValue(c[urlIdx])).trim();
               if (!name || !urlStr) continue;
-              var pAt = parseGvizDate(c[colIndex.publishAt] && c[colIndex.publishAt].v);
-              var uAt = parseGvizDate(c[colIndex.unpublishAt] && c[colIndex.unpublishAt].v);
-              if (!pAt || !uAt || isNaN(pAt) || isNaN(uAt)) continue;
+
+              var pAt = parseGvizDate(c[pAtIdx] && c[pAtIdx].v);
+              var uAt = parseGvizDate(c[uAtIdx] && c[uAtIdx].v);
+
+              if (!pAt || !uAt || isNaN(pAt.getTime()) || isNaN(uAt.getTime())) continue;
+
+              // 檢查當前時間是否在上架與下架區間之內
               if (now < pAt.getTime() || now > uAt.getTime()) continue;
+
               out.push({
                 name: name,
                 url: urlStr,
-                deadlineAt: cellDisplay(c[colIndex.unpublishAt]),
+                // 🌟 格式化為包含年月日時分的完整時間
+                deadlineAt: formatDateTime(uAt),
                 _sortTime: pAt.getTime(),
               });
             }
+
+            // 依照上架時間由新到舊排序
             out.sort(function (a, b) {
               return b._sortTime - a._sortTime;
             });
